@@ -1,6 +1,6 @@
 {
   "name": "stryker-gha-ci-report",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "description": "Convert Stryker mutation testing JSON reports to GitHub Actions summary markdown",
   "type": "module",
   "main": "dist/index.js",
