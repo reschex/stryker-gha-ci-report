@@ -30,11 +30,14 @@ export interface StrykerReport {
 }
 
 function mutationScore(mutants: Mutant[]): number {
-  if (mutants.length === 0) return 0;
-  const detected = mutants.filter(
+  const testable = mutants.filter(
+    (m) => m.status !== "CompileError" && m.status !== "RuntimeError",
+  );
+  if (testable.length === 0) return 0;
+  const detected = testable.filter(
     (m) => m.status === "Killed" || m.status === "Timeout",
   ).length;
-  return (detected / mutants.length) * 100;
+  return (detected / testable.length) * 100;
 }
 
 function thresholdIndicator(

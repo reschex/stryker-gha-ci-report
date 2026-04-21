@@ -95,6 +95,16 @@ describe("convertToMarkdown", () => {
       expect(markdown).toContain("50.00%");
     });
 
+    it("excludes CompileError and RuntimeError mutants from the score", () => {
+      const report = makeReport({
+        "src/foo.ts": ["Killed", "Survived", "CompileError", "CompileError", "RuntimeError"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("50.00%");
+    });
+
     it("computes 0% when there are no mutants at all", () => {
       const markdown = convertToMarkdown(
         makeReport({ "src/empty.ts": [] }),
