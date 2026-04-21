@@ -8,6 +8,8 @@ Feature: Convert Stryker mutation testing report to GitHub Actions summary markd
     Given a Stryker JSON report
     When the report is converted to markdown
     Then the output contains a summary header with the overall mutation score
+    And the mutation score is calculated as (Killed + Timeout) / (Killed + Timeout + Survived + NoCoverage)
+    And CompileError, RuntimeError, and Ignored mutants are excluded from the calculation
 
   Scenario: Show per-file mutation scores
     Given a Stryker JSON report with multiple files

@@ -4,7 +4,8 @@ export type MutantStatus =
   | "Timeout"
   | "NoCoverage"
   | "RuntimeError"
-  | "CompileError";
+  | "CompileError"
+  | "Ignored";
 
 export interface MutantLocation {
   start: { line: number; column: number };
@@ -31,7 +32,10 @@ export interface StrykerReport {
 
 function mutationScore(mutants: Mutant[]): number {
   const testable = mutants.filter(
-    (m) => m.status !== "CompileError" && m.status !== "RuntimeError",
+    (m) =>
+      m.status !== "CompileError" &&
+      m.status !== "RuntimeError" &&
+      m.status !== "Ignored",
   );
   if (testable.length === 0) return 0;
   const detected = testable.filter(
