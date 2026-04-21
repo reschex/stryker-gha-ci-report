@@ -100,6 +100,31 @@ function survivedMutantsSection(
   ].join("\n");
 }
 
+function recommendationsSection(fileEntries: [string, FileResult][]): string {
+  const filesWithSurvived = fileEntries
+    .map(([name, file]) => {
+      const survived = file.mutants.filter((m) => m.status === "Survived").length;
+      return { name, survived, score: mutationScore(file.mutants) };
+    })
+    .filter((f) => f.survived > 0)
+    .sort((a, b) => b.survived - a.survived)
+    .slice(0, 5);
+
+  if (filesWithSurvived.length === 0) return "";
+
+  const rows = filesWithSurvived.map(
+    (f) => `| ${f.name} | ${f.survived} | ${f.score.toFixed(2)}% |`,
+  );
+
+  return [
+    "## Recommendations",
+    "",
+    "| File | Survived | Mutation Score |",
+    "| --- | --- | --- |",
+    ...rows,
+  ].join("\n");
+}
+
 export interface ConvertOptions {
   survivedMutants?: boolean;
 }
@@ -116,6 +141,7 @@ export function convertToMarkdown(
     statusCountsTable(allMutants),
     fileScoresTable(fileEntries),
     options.survivedMutants ? survivedMutantsSection(fileEntries) : "",
+    recommendationsSection(fileEntries),
   ];
 
   return sections.filter(Boolean).join("\n\n") + "\n";

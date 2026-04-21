@@ -215,6 +215,69 @@ describe("convertToMarkdown", () => {
     });
   });
 
+  describe("recommendations", () => {
+    it("includes file name, survived count, and mutation score per recommendation", () => {
+      const report = makeReport({
+        "src/foo.ts": ["Killed", "Survived", "Survived"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("## Recommendations");
+      expect(markdown).toContain("| File | Survived | Mutation Score |");
+      expect(markdown).toContain("| src/foo.ts | 2 | 33.33% |");
+    });
+
+    it("ranks files by most survived mutants descending", () => {
+      const report = makeReport({
+        "src/few.ts": ["Survived"],
+        "src/many.ts": ["Survived", "Survived", "Survived"],
+        "src/some.ts": ["Survived", "Survived"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      const recsSection = markdown.slice(markdown.indexOf("## Recommendations"));
+      const manyIdx = recsSection.indexOf("src/many.ts");
+      const someIdx = recsSection.indexOf("src/some.ts");
+      const fewIdx = recsSection.indexOf("src/few.ts");
+      expect(manyIdx).toBeLessThan(someIdx);
+      expect(someIdx).toBeLessThan(fewIdx);
+    });
+
+    it("limits recommendations to top 5 files", () => {
+      const report = makeReport({
+        "src/a.ts": ["Survived", "Survived", "Survived", "Survived", "Survived", "Survived"],
+        "src/b.ts": ["Survived", "Survived", "Survived", "Survived", "Survived"],
+        "src/c.ts": ["Survived", "Survived", "Survived", "Survived"],
+        "src/d.ts": ["Survived", "Survived", "Survived"],
+        "src/e.ts": ["Survived", "Survived"],
+        "src/f.ts": ["Survived"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      const recsSection = markdown.slice(markdown.indexOf("## Recommendations"));
+      expect(recsSection).toContain("src/a.ts");
+      expect(recsSection).toContain("src/b.ts");
+      expect(recsSection).toContain("src/c.ts");
+      expect(recsSection).toContain("src/d.ts");
+      expect(recsSection).toContain("src/e.ts");
+      expect(recsSection).not.toContain("src/f.ts");
+    });
+
+    it("omits recommendations when no mutants survived", () => {
+      const report = makeReport({
+        "src/foo.ts": ["Killed", "Killed"],
+        "src/bar.ts": ["Killed"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).not.toContain("## Recommendations");
+    });
+  });
+
   describe("per-file mutation scores", () => {
     it("omits the table when the report has no files", () => {
       const report = makeReport({});
