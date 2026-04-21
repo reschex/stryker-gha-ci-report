@@ -41,6 +41,19 @@ npx stryker-gha-ci-report [--survived-mutants] <path-to-mutation.json>
   run: npx stryker-gha-ci-report reports/mutation/mutation.json >> $GITHUB_STEP_SUMMARY
 ```
 
+### Vitest Runner
+
+When using `@stryker-mutator/vitest-runner`, set the Vitest reporters to `"agent"` in your Stryker config to prevent Vitest's own output from being appended to `$GITHUB_STEP_SUMMARY`:
+
+```json
+{
+  "vitest": {
+    "configFile": "vitest.config.ts",
+    "reporters": ["agent"]
+  }
+}
+```
+
 ## Library Usage
 
 ```ts

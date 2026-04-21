@@ -48,9 +48,9 @@ function thresholdIndicator(
   score: number,
   thresholds: StrykerReport["thresholds"],
 ): string {
-  if (score >= thresholds.high) return "passing";
-  if (score < thresholds.low) return "failing";
-  return "warning";
+  if (score >= thresholds.high) return "✅ passing";
+  if (score < thresholds.low) return "❌ failing";
+  return "⚠️ warning";
 }
 
 function summaryHeader(
@@ -59,7 +59,7 @@ function summaryHeader(
 ): string {
   const score = mutationScore(mutants);
   const indicator = thresholdIndicator(score, thresholds);
-  return `# Mutation Testing Report\n\n**Mutation Score: ${score.toFixed(2)}% — ${indicator}**`;
+  return `# 🧬 Mutation Testing Report\n\n**Mutation Score: ${score.toFixed(2)}% ${indicator}**`;
 }
 
 function statusCountsTable(mutants: Mutant[]): string {
@@ -68,10 +68,10 @@ function statusCountsTable(mutants: Mutant[]): string {
   return [
     "| Status | Count |",
     "| --- | --- |",
-    `| Killed | ${c.killed} |`,
-    `| Survived | ${c.survived} |`,
-    `| No Coverage | ${c.noCoverage} |`,
-    `| Timeout | ${c.timeout} |`,
+    `| ✅ Killed | ${c.killed} |`,
+    `| 🔴 Survived | ${c.survived} |`,
+    `| 🟡 No Coverage | ${c.noCoverage} |`,
+    `| ⏱️ Timeout | ${c.timeout} |`,
   ].join("\n");
 }
 
@@ -114,16 +114,30 @@ function allMutantsInNode(node: FolderNode): Mutant[] {
   return mutants;
 }
 
-function renderFolderNode(name: string, node: FolderNode): string {
+function thresholdEmoji(
+  score: number,
+  thresholds: StrykerReport["thresholds"],
+): string {
+  if (score >= thresholds.high) return "✅";
+  if (score < thresholds.low) return "❌";
+  return "⚠️";
+}
+
+function renderFolderNode(
+  name: string,
+  node: FolderNode,
+  thresholds: StrykerReport["thresholds"],
+): string {
   const allMuts = allMutantsInNode(node);
   const score = mutationScore(allMuts);
   const counts = statusCounts(allMuts);
+  const emoji = thresholdEmoji(score, thresholds);
 
   const parts: string[] = [];
 
   parts.push("<details>");
   parts.push(
-    `<summary><code>${name}</code> ${score.toFixed(2)}% ` +
+    `<summary>${emoji} <code>${name}</code> ${score.toFixed(2)}% ` +
       `(Killed: ${counts.killed}, Survived: ${counts.survived}, ` +
       `No Coverage: ${counts.noCoverage}, Timeout: ${counts.timeout})</summary>`,
   );
@@ -142,7 +156,7 @@ function renderFolderNode(name: string, node: FolderNode): string {
   }
 
   for (const [childName, childNode] of node.children) {
-    parts.push(renderFolderNode(childName, childNode));
+    parts.push(renderFolderNode(childName, childNode, thresholds));
     parts.push("");
   }
 
@@ -150,18 +164,28 @@ function renderFolderNode(name: string, node: FolderNode): string {
   return parts.join("\n");
 }
 
-function folderScoresSection(fileEntries: [string, FileResult][]): string {
+function folderScoresSection(
+  fileEntries: [string, FileResult][],
+  thresholds: StrykerReport["thresholds"],
+): string {
   if (fileEntries.length === 0) return "";
   const tree = buildFolderTree(fileEntries);
 
   const sections: string[] = [];
   for (const [name, node] of tree.children) {
-    sections.push(renderFolderNode(name, node));
+    sections.push(renderFolderNode(name, node, thresholds));
   }
-  for (const [fileName, file] of tree.files) {
-    const c = statusCounts(file.mutants);
+  if (tree.files.length > 0) {
+    const rows = tree.files.map(([fileName, file]) => {
+      const c = statusCounts(file.mutants);
+      return `| ${fileName} | ${mutationScore(file.mutants).toFixed(2)}% | ${c.killed} | ${c.survived} | ${c.noCoverage} | ${c.timeout} |`;
+    });
     sections.push(
-      `| ${fileName} | ${mutationScore(file.mutants).toFixed(2)}% | ${c.killed} | ${c.survived} | ${c.noCoverage} | ${c.timeout} |`,
+      [
+        "| File | Mutation Score | Killed | Survived | No Coverage | Timeout |",
+        "| --- | --- | --- | --- | --- | --- |",
+        ...rows,
+      ].join("\n"),
     );
   }
   return sections.join("\n\n");
@@ -217,7 +241,7 @@ function recommendationsSection(fileEntries: [string, FileResult][]): string {
   );
 
   return [
-    "## Recommendations",
+    "## 💡 Recommendations",
     "",
     "| File | Survived | Mutation Score |",
     "| --- | --- | --- |",
@@ -239,7 +263,7 @@ export function convertToMarkdown(
   const sections = [
     summaryHeader(allMutants, report.thresholds),
     statusCountsTable(allMutants),
-    folderScoresSection(fileEntries),
+    folderScoresSection(fileEntries, report.thresholds),
     options.survivedMutants ? survivedMutantsSection(fileEntries) : "",
     recommendationsSection(fileEntries),
   ];

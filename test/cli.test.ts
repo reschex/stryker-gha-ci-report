@@ -13,7 +13,7 @@ describe("cli", () => {
   it("omits survived mutants section by default", () => {
     const output = run(exampleReport);
 
-    expect(output).toContain("# Mutation Testing Report");
+    expect(output).toContain("# 🧬 Mutation Testing Report");
     expect(output).not.toContain("Survived Mutants");
   });
 

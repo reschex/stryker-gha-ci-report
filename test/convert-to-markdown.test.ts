@@ -64,7 +64,7 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).toContain("# Mutation Testing Report");
+      expect(markdown).toContain("# 🧬 Mutation Testing Report");
       expect(markdown).toContain("75.00%");
     });
 
@@ -122,10 +122,10 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).toContain("| Killed | 2 |");
-      expect(markdown).toContain("| Survived | 1 |");
-      expect(markdown).toContain("| No Coverage | 1 |");
-      expect(markdown).toContain("| Timeout | 1 |");
+      expect(markdown).toContain("| ✅ Killed | 2 |");
+      expect(markdown).toContain("| 🔴 Survived | 1 |");
+      expect(markdown).toContain("| 🟡 No Coverage | 1 |");
+      expect(markdown).toContain("| ⏱️ Timeout | 1 |");
     });
 
     it("aggregates counts across multiple files and shows zero for absent statuses", () => {
@@ -136,10 +136,10 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).toContain("| Killed | 3 |");
-      expect(markdown).toContain("| Survived | 0 |");
-      expect(markdown).toContain("| No Coverage | 0 |");
-      expect(markdown).toContain("| Timeout | 0 |");
+      expect(markdown).toContain("| ✅ Killed | 3 |");
+      expect(markdown).toContain("| 🔴 Survived | 0 |");
+      expect(markdown).toContain("| 🟡 No Coverage | 0 |");
+      expect(markdown).toContain("| ⏱️ Timeout | 0 |");
     });
   });
 
@@ -233,7 +233,7 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).toContain("passing");
+      expect(markdown).toContain("✅ passing");
     });
 
     it("indicates warning when score is between low and high thresholds", () => {
@@ -243,9 +243,9 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).toContain("warning");
-      expect(markdown).not.toContain("passing");
-      expect(markdown).not.toContain("failing");
+      expect(markdown).toContain("⚠️ warning");
+      expect(markdown).not.toContain("✅ passing");
+      expect(markdown).not.toContain("❌ failing");
     });
 
     it("indicates passing when score exactly equals the high threshold", () => {
@@ -256,7 +256,7 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).toContain("passing");
+      expect(markdown).toContain("✅ passing");
     });
 
     it("indicates warning when score exactly equals the low threshold", () => {
@@ -267,7 +267,7 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).toContain("warning");
+      expect(markdown).toContain("⚠️ warning");
     });
 
     it("indicates failing when score is below the low threshold", () => {
@@ -277,7 +277,7 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).toContain("failing");
+      expect(markdown).toContain("❌ failing");
     });
   });
 
@@ -289,7 +289,7 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).toContain("## Recommendations");
+      expect(markdown).toContain("## 💡 Recommendations");
       expect(markdown).toContain("| File | Survived | Mutation Score |");
       expect(markdown).toContain("| src/foo.ts | 2 | 33.33% |");
     });
@@ -303,7 +303,7 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      const recsSection = markdown.slice(markdown.indexOf("## Recommendations"));
+      const recsSection = markdown.slice(markdown.indexOf("## 💡 Recommendations"));
       const manyIdx = recsSection.indexOf("src/many.ts");
       const someIdx = recsSection.indexOf("src/some.ts");
       const fewIdx = recsSection.indexOf("src/few.ts");
@@ -323,7 +323,7 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      const recsSection = markdown.slice(markdown.indexOf("## Recommendations"));
+      const recsSection = markdown.slice(markdown.indexOf("## 💡 Recommendations"));
       expect(recsSection).toContain("src/a.ts");
       expect(recsSection).toContain("src/b.ts");
       expect(recsSection).toContain("src/c.ts");
@@ -340,7 +340,7 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).not.toContain("## Recommendations");
+      expect(markdown).not.toContain("## 💡 Recommendations");
     });
   });
 
@@ -353,10 +353,20 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      const srcSummary = markdown.match(/<summary><code>src<\/code>[^<]+/)?.[0] ?? "";
+      const srcSummary = markdown.match(/<summary>. <code>src<\/code>.+/)?.[0] ?? "";
       expect(srcSummary).toContain("50.00%");
       expect(srcSummary).toContain("Killed: 1");
       expect(srcSummary).toContain("Survived: 1");
+    });
+
+    it("shows threshold emoji on folder summary", () => {
+      const report = makeReport({
+        "src/foo.ts": ["Killed", "Killed", "Killed", "Killed", "Killed"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("<summary>✅");
     });
 
     it("nests subfolders as collapsible sections within their parent", () => {
@@ -367,12 +377,12 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).toContain("<summary><code>src</code>");
-      expect(markdown).toContain("<summary><code>core</code>");
+      expect(markdown).toContain("<code>src</code>");
+      expect(markdown).toContain("<code>core</code>");
       expect(markdown).toContain("| foo.ts | 50.00% | 1 | 1 | 0 | 0 |");
       expect(markdown).toContain("| bar.ts | 100.00% | 1 | 0 | 0 | 0 |");
-      const srcIdx = markdown.indexOf("<summary><code>src</code>");
-      const coreIdx = markdown.indexOf("<summary><code>core</code>");
+      const srcIdx = markdown.indexOf("<code>src</code>");
+      const coreIdx = markdown.indexOf("<code>core</code>");
       expect(srcIdx).toBeLessThan(coreIdx);
     });
 
@@ -384,8 +394,8 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).toContain("<summary><code>src</code>");
-      expect(markdown).toContain("<summary><code>lib</code>");
+      expect(markdown).toContain("<code>src</code>");
+      expect(markdown).toContain("<code>lib</code>");
       expect(markdown).toContain("| foo.ts | 50.00% | 1 | 1 | 0 | 0 |");
       expect(markdown).toContain("| bar.ts | 100.00% | 2 | 0 | 0 | 0 |");
     });
@@ -399,7 +409,7 @@ describe("convertToMarkdown", () => {
       const markdown = convertToMarkdown(report);
 
       expect(markdown).toContain("<details>");
-      expect(markdown).toContain("<summary><code>src</code>");
+      expect(markdown).toContain("<code>src</code>");
       expect(markdown).toContain("75.00%");
       expect(markdown).toContain("| File | Mutation Score | Killed | Survived | No Coverage | Timeout |");
       expect(markdown).toContain("| foo.ts | 50.00% | 1 | 1 | 0 | 0 |");
@@ -408,12 +418,42 @@ describe("convertToMarkdown", () => {
   });
 
   describe("folder scores edge cases", () => {
+    it("nests 3+ levels deep with correct hierarchy", () => {
+      const report = makeReport({
+        "src/core/utils/helper.ts": ["Killed", "Survived"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("<code>src</code>");
+      expect(markdown).toContain("<code>core</code>");
+      expect(markdown).toContain("<code>utils</code>");
+      expect(markdown).toContain("| helper.ts | 50.00% | 1 | 1 | 0 | 0 |");
+      const srcIdx = markdown.indexOf("<code>src</code>");
+      const coreIdx = markdown.indexOf("<code>core</code>");
+      const utilsIdx = markdown.indexOf("<code>utils</code>");
+      expect(srcIdx).toBeLessThan(coreIdx);
+      expect(coreIdx).toBeLessThan(utilsIdx);
+    });
+
     it("omits folder sections when the report has no files", () => {
       const report = makeReport({});
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).not.toContain("<details>");
+      expect(markdown).not.toContain("Mutation Score |");
+      expect(markdown).not.toContain("<code>");
+    });
+
+    it("wraps root-level files in a table with headers", () => {
+      const report = makeReport({
+        "app.ts": ["Killed", "Survived"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("| File | Mutation Score | Killed | Survived | No Coverage | Timeout |");
+      expect(markdown).toContain("| app.ts | 50.00% | 1 | 1 | 0 | 0 |");
     });
 
     it("shows 0.00% for a file with no mutants", () => {
