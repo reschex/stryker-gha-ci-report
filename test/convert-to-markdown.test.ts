@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { convertToMarkdown } from "../src/convert-to-markdown.js";
+import { convertToMarkdown, type MutantStatus } from "../src/convert-to-markdown.js";
 
 function makeReport(
-  files: Record<string, string[]>,
+  files: Record<string, MutantStatus[]>,
 ) {
   return {
     files: Object.fromEntries(
@@ -69,6 +69,44 @@ describe("convertToMarkdown", () => {
       );
 
       expect(markdown).toContain("0.00%");
+    });
+  });
+
+  describe("per-file mutation scores", () => {
+    it("omits the table when the report has no files", () => {
+      const report = makeReport({});
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).not.toContain("| File |");
+    });
+
+    it("shows 0.00% for a file with no mutants", () => {
+      const report = makeReport({
+        "src/empty.ts": [],
+        "src/foo.ts": ["Killed"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("| src/empty.ts | 0.00% |");
+      expect(markdown).toContain("| src/foo.ts | 100.00% |");
+    });
+
+    it("includes a table with each file and its mutation score", () => {
+      const report = makeReport({
+        "src/foo.ts": ["Killed", "Killed", "Survived"],
+        "src/bar.ts": ["Killed", "Survived", "Survived", "Survived"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain(
+        "| File | Mutation Score |\n" +
+        "| --- | --- |\n" +
+        "| src/foo.ts | 66.67% |\n" +
+        "| src/bar.ts | 25.00% |",
+      );
     });
   });
 });
