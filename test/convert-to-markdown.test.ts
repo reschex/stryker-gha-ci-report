@@ -215,6 +215,62 @@ describe("convertToMarkdown", () => {
     });
   });
 
+  describe("threshold indication", () => {
+    it("indicates passing when score meets or exceeds the high threshold", () => {
+      const report = makeReport({
+        "src/foo.ts": ["Killed", "Killed", "Killed", "Killed"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("passing");
+    });
+
+    it("indicates warning when score is between low and high thresholds", () => {
+      const report = makeReport({
+        "src/foo.ts": ["Killed", "Killed", "Killed", "Survived"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("warning");
+      expect(markdown).not.toContain("passing");
+      expect(markdown).not.toContain("failing");
+    });
+
+    it("indicates passing when score exactly equals the high threshold", () => {
+      const report = {
+        ...makeReport({ "src/foo.ts": ["Killed", "Killed", "Killed", "Killed"] }),
+        thresholds: { high: 100, low: 60, break: 0 },
+      };
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("passing");
+    });
+
+    it("indicates warning when score exactly equals the low threshold", () => {
+      const report = {
+        ...makeReport({ "src/foo.ts": ["Killed", "Killed", "Killed", "Survived", "Survived"] }),
+        thresholds: { high: 80, low: 60, break: 0 },
+      };
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("warning");
+    });
+
+    it("indicates failing when score is below the low threshold", () => {
+      const report = makeReport({
+        "src/foo.ts": ["Killed", "Survived", "Survived", "Survived", "Survived"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("failing");
+    });
+  });
+
   describe("recommendations", () => {
     it("includes file name, survived count, and mutation score per recommendation", () => {
       const report = makeReport({

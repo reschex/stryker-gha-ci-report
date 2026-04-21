@@ -37,9 +37,22 @@ function mutationScore(mutants: Mutant[]): number {
   return (detected / mutants.length) * 100;
 }
 
-function summaryHeader(mutants: Mutant[]): string {
+function thresholdIndicator(
+  score: number,
+  thresholds: StrykerReport["thresholds"],
+): string {
+  if (score >= thresholds.high) return "passing";
+  if (score < thresholds.low) return "failing";
+  return "warning";
+}
+
+function summaryHeader(
+  mutants: Mutant[],
+  thresholds: StrykerReport["thresholds"],
+): string {
   const score = mutationScore(mutants);
-  return `# Mutation Testing Report\n\n**Mutation Score: ${score.toFixed(2)}%**`;
+  const indicator = thresholdIndicator(score, thresholds);
+  return `# Mutation Testing Report\n\n**Mutation Score: ${score.toFixed(2)}% — ${indicator}**`;
 }
 
 function statusCountsTable(mutants: Mutant[]): string {
@@ -137,7 +150,7 @@ export function convertToMarkdown(
   const fileEntries = Object.entries(report.files);
 
   const sections = [
-    summaryHeader(allMutants),
+    summaryHeader(allMutants, report.thresholds),
     statusCountsTable(allMutants),
     fileScoresTable(fileEntries),
     options.survivedMutants ? survivedMutantsSection(fileEntries) : "",
