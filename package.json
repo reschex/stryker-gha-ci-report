@@ -12,7 +12,8 @@
     "lint:fix": "eslint --fix src",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "report": "node dist/cli.js"
   },
   "keywords": [
     "stryker",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/node": "^25.6.0",
     "eslint": "^10.2.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.0",
