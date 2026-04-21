@@ -72,6 +72,35 @@ describe("convertToMarkdown", () => {
     });
   });
 
+  describe("mutant status counts", () => {
+    it("includes counts for killed, survived, no coverage, and timed out mutants", () => {
+      const report = makeReport({
+        "src/foo.ts": ["Killed", "Killed", "Survived", "NoCoverage", "Timeout"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("| Killed | 2 |");
+      expect(markdown).toContain("| Survived | 1 |");
+      expect(markdown).toContain("| No Coverage | 1 |");
+      expect(markdown).toContain("| Timeout | 1 |");
+    });
+
+    it("aggregates counts across multiple files and shows zero for absent statuses", () => {
+      const report = makeReport({
+        "src/a.ts": ["Killed", "Killed"],
+        "src/b.ts": ["Killed"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("| Killed | 3 |");
+      expect(markdown).toContain("| Survived | 0 |");
+      expect(markdown).toContain("| No Coverage | 0 |");
+      expect(markdown).toContain("| Timeout | 0 |");
+    });
+  });
+
   describe("per-file mutation scores", () => {
     it("omits the table when the report has no files", () => {
       const report = makeReport({});
