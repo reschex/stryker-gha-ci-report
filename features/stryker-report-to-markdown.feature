@@ -19,10 +19,16 @@ Feature: Convert Stryker mutation testing report to GitHub Actions summary markd
     When the report is converted to markdown
     Then the output contains counts for killed, survived, no coverage, and timed out mutants
 
-  Scenario: Highlight survived mutants
+  Scenario: Highlight survived mutants when enabled
     Given a Stryker JSON report containing survived mutants
-    When the report is converted to markdown
+    When the report is converted to markdown with the --survived-mutants flag
     Then the output lists survived mutants with their file, location, and mutator name
+    And the survived mutants section is wrapped in a collapsible details element
+
+  Scenario: Omit survived mutants by default
+    Given a Stryker JSON report containing survived mutants
+    When the report is converted to markdown without the --survived-mutants flag
+    Then the output does not contain a survived mutants section
 
   Scenario: Indicate threshold result
     Given a Stryker JSON report with configured thresholds

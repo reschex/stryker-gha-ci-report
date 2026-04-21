@@ -134,7 +134,34 @@ describe("convertToMarkdown", () => {
   });
 
   describe("survived mutants", () => {
-    it("lists survived mutants with file, location, and mutator name", () => {
+    it("omits the section by default even when survived mutants exist", () => {
+      const report = makeDetailedReport({
+        "src/foo.ts": [
+          { status: "Survived", mutatorName: "StringLiteral", location: { line: 3, column: 10 } },
+        ],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).not.toContain("Survived Mutants");
+    });
+
+    it("wraps survived mutants in a collapsible details element when enabled", () => {
+      const report = makeDetailedReport({
+        "src/foo.ts": [
+          { status: "Survived", mutatorName: "ConditionalExpression", location: { line: 10, column: 5 } },
+        ],
+      });
+
+      const markdown = convertToMarkdown(report, { survivedMutants: true });
+
+      expect(markdown).toContain("<details>");
+      expect(markdown).toContain("<summary>Survived Mutants (1)</summary>");
+      expect(markdown).toContain("</details>");
+      expect(markdown).toContain("| src/foo.ts | 10:5 | ConditionalExpression |");
+    });
+
+    it("lists survived mutants with file, location, and mutator name when enabled", () => {
       const report = makeDetailedReport({
         "src/foo.ts": [
           { status: "Killed", mutatorName: "BlockStatement", location: { line: 5, column: 1 } },
@@ -142,14 +169,13 @@ describe("convertToMarkdown", () => {
         ],
       });
 
-      const markdown = convertToMarkdown(report);
+      const markdown = convertToMarkdown(report, { survivedMutants: true });
 
-      expect(markdown).toContain("## Survived Mutants");
       expect(markdown).toContain("| src/foo.ts | 10:5 | ConditionalExpression |");
       expect(markdown).not.toContain("BlockStatement");
     });
 
-    it("lists survived mutants from multiple files", () => {
+    it("lists survived mutants from multiple files when enabled", () => {
       const report = makeDetailedReport({
         "src/foo.ts": [
           { status: "Survived", mutatorName: "StringLiteral", location: { line: 3, column: 10 } },
@@ -159,7 +185,7 @@ describe("convertToMarkdown", () => {
         ],
       });
 
-      const markdown = convertToMarkdown(report);
+      const markdown = convertToMarkdown(report, { survivedMutants: true });
 
       expect(markdown).toContain("| src/foo.ts | 3:10 | StringLiteral |");
       expect(markdown).toContain("| src/bar.ts | 7:1 | ArithmeticOperator |");
@@ -172,18 +198,18 @@ describe("convertToMarkdown", () => {
         ],
       });
 
-      const markdown = convertToMarkdown(report);
+      const markdown = convertToMarkdown(report, { survivedMutants: true });
 
-      expect(markdown).toContain("## Survived Mutants");
+      expect(markdown).toContain("<summary>Survived Mutants (1)</summary>");
       expect(markdown).toContain("| src/foo.ts | - | StringLiteral |");
     });
 
-    it("omits the section when no mutants survived", () => {
+    it("omits the section when enabled but no mutants survived", () => {
       const report = makeReport({
         "src/foo.ts": ["Killed", "Killed"],
       });
 
-      const markdown = convertToMarkdown(report);
+      const markdown = convertToMarkdown(report, { survivedMutants: true });
 
       expect(markdown).not.toContain("Survived Mutants");
     });

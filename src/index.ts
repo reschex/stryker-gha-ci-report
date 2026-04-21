@@ -1,5 +1,6 @@
 export { convertToMarkdown } from "./convert-to-markdown.js";
 export type {
+  ConvertOptions,
   StrykerReport,
   Mutant,
   FileResult,

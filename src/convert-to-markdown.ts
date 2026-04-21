@@ -84,16 +84,30 @@ function survivedMutantsSection(
   }
   if (rows.length === 0) return "";
 
-  return [
-    "## Survived Mutants",
-    "",
+  const table = [
     "| File | Location | Mutator |",
     "| --- | --- | --- |",
     ...rows,
   ].join("\n");
+
+  return [
+    "<details>",
+    `<summary>Survived Mutants (${rows.length})</summary>`,
+    "",
+    table,
+    "",
+    "</details>",
+  ].join("\n");
 }
 
-export function convertToMarkdown(report: StrykerReport): string {
+export interface ConvertOptions {
+  survivedMutants?: boolean;
+}
+
+export function convertToMarkdown(
+  report: StrykerReport,
+  options: ConvertOptions = {},
+): string {
   const allMutants = Object.values(report.files).flatMap((f) => f.mutants);
   const fileEntries = Object.entries(report.files);
 
@@ -101,7 +115,7 @@ export function convertToMarkdown(report: StrykerReport): string {
     summaryHeader(allMutants),
     statusCountsTable(allMutants),
     fileScoresTable(fileEntries),
-    survivedMutantsSection(fileEntries),
+    options.survivedMutants ? survivedMutantsSection(fileEntries) : "",
   ];
 
   return sections.filter(Boolean).join("\n\n") + "\n";
