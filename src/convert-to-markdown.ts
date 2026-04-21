@@ -6,10 +6,16 @@ export type MutantStatus =
   | "RuntimeError"
   | "CompileError";
 
+export interface MutantLocation {
+  start: { line: number; column: number };
+  end: { line: number; column: number };
+}
+
 export interface Mutant {
   id: string;
   status: MutantStatus;
   mutatorName: string;
+  location?: MutantLocation;
 }
 
 export interface FileResult {
@@ -62,6 +68,31 @@ function fileScoresTable(fileEntries: [string, FileResult][]): string {
   return ["| File | Mutation Score |", "| --- | --- |", ...rows].join("\n");
 }
 
+function survivedMutantsSection(
+  fileEntries: [string, FileResult][],
+): string {
+  const rows: string[] = [];
+  for (const [name, file] of fileEntries) {
+    for (const mutant of file.mutants) {
+      if (mutant.status === "Survived") {
+        const loc = mutant.location
+          ? `${mutant.location.start.line}:${mutant.location.start.column}`
+          : "-";
+        rows.push(`| ${name} | ${loc} | ${mutant.mutatorName} |`);
+      }
+    }
+  }
+  if (rows.length === 0) return "";
+
+  return [
+    "## Survived Mutants",
+    "",
+    "| File | Location | Mutator |",
+    "| --- | --- | --- |",
+    ...rows,
+  ].join("\n");
+}
+
 export function convertToMarkdown(report: StrykerReport): string {
   const allMutants = Object.values(report.files).flatMap((f) => f.mutants);
   const fileEntries = Object.entries(report.files);
@@ -70,6 +101,7 @@ export function convertToMarkdown(report: StrykerReport): string {
     summaryHeader(allMutants),
     statusCountsTable(allMutants),
     fileScoresTable(fileEntries),
+    survivedMutantsSection(fileEntries),
   ];
 
   return sections.filter(Boolean).join("\n\n") + "\n";

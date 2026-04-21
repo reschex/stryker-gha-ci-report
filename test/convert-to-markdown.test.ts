@@ -23,6 +23,38 @@ function makeReport(
   };
 }
 
+interface MutantInput {
+  status: MutantStatus;
+  mutatorName: string;
+  location?: { line: number; column: number };
+}
+
+function makeDetailedReport(files: Record<string, MutantInput[]>) {
+  return {
+    files: Object.fromEntries(
+      Object.entries(files).map(([name, mutants]) => [
+        name,
+        {
+          language: "typescript",
+          mutants: mutants.map((m, i) => ({
+            id: String(i),
+            status: m.status,
+            mutatorName: m.mutatorName,
+            ...(m.location && {
+              location: {
+                start: { line: m.location.line, column: m.location.column },
+                end: { line: m.location.line, column: m.location.column },
+              },
+            }),
+          })),
+        },
+      ]),
+    ),
+    schemaVersion: "1",
+    thresholds: { high: 80, low: 60, break: 0 },
+  };
+}
+
 describe("convertToMarkdown", () => {
   describe("summary header with overall mutation score", () => {
     it("includes a heading with the mutation score percentage", () => {
@@ -98,6 +130,62 @@ describe("convertToMarkdown", () => {
       expect(markdown).toContain("| Survived | 0 |");
       expect(markdown).toContain("| No Coverage | 0 |");
       expect(markdown).toContain("| Timeout | 0 |");
+    });
+  });
+
+  describe("survived mutants", () => {
+    it("lists survived mutants with file, location, and mutator name", () => {
+      const report = makeDetailedReport({
+        "src/foo.ts": [
+          { status: "Killed", mutatorName: "BlockStatement", location: { line: 5, column: 1 } },
+          { status: "Survived", mutatorName: "ConditionalExpression", location: { line: 10, column: 5 } },
+        ],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("## Survived Mutants");
+      expect(markdown).toContain("| src/foo.ts | 10:5 | ConditionalExpression |");
+      expect(markdown).not.toContain("BlockStatement");
+    });
+
+    it("lists survived mutants from multiple files", () => {
+      const report = makeDetailedReport({
+        "src/foo.ts": [
+          { status: "Survived", mutatorName: "StringLiteral", location: { line: 3, column: 10 } },
+        ],
+        "src/bar.ts": [
+          { status: "Survived", mutatorName: "ArithmeticOperator", location: { line: 7, column: 1 } },
+        ],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("| src/foo.ts | 3:10 | StringLiteral |");
+      expect(markdown).toContain("| src/bar.ts | 7:1 | ArithmeticOperator |");
+    });
+
+    it("shows a dash for location when mutant has no location data", () => {
+      const report = makeDetailedReport({
+        "src/foo.ts": [
+          { status: "Survived", mutatorName: "StringLiteral" },
+        ],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("## Survived Mutants");
+      expect(markdown).toContain("| src/foo.ts | - | StringLiteral |");
+    });
+
+    it("omits the section when no mutants survived", () => {
+      const report = makeReport({
+        "src/foo.ts": ["Killed", "Killed"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).not.toContain("Survived Mutants");
     });
   });
 
