@@ -63,30 +63,110 @@ function summaryHeader(
 }
 
 function statusCountsTable(mutants: Mutant[]): string {
-  const killed = mutants.filter((m) => m.status === "Killed").length;
-  const survived = mutants.filter((m) => m.status === "Survived").length;
-  const noCoverage = mutants.filter((m) => m.status === "NoCoverage").length;
-  const timeout = mutants.filter((m) => m.status === "Timeout").length;
+  const c = statusCounts(mutants);
 
   return [
     "| Status | Count |",
     "| --- | --- |",
-    `| Killed | ${killed} |`,
-    `| Survived | ${survived} |`,
-    `| No Coverage | ${noCoverage} |`,
-    `| Timeout | ${timeout} |`,
+    `| Killed | ${c.killed} |`,
+    `| Survived | ${c.survived} |`,
+    `| No Coverage | ${c.noCoverage} |`,
+    `| Timeout | ${c.timeout} |`,
   ].join("\n");
 }
 
-function fileScoresTable(fileEntries: [string, FileResult][]): string {
-  if (fileEntries.length === 0) return "";
-
-  const rows = fileEntries.map(
-    ([name, file]) => `| ${name} | ${mutationScore(file.mutants).toFixed(2)}% |`,
-  );
-
-  return ["| File | Mutation Score |", "| --- | --- |", ...rows].join("\n");
+function statusCounts(mutants: Mutant[]) {
+  return {
+    killed: mutants.filter((m) => m.status === "Killed").length,
+    survived: mutants.filter((m) => m.status === "Survived").length,
+    noCoverage: mutants.filter((m) => m.status === "NoCoverage").length,
+    timeout: mutants.filter((m) => m.status === "Timeout").length,
+  };
 }
+
+interface FolderNode {
+  files: [string, FileResult][];
+  children: Map<string, FolderNode>;
+}
+
+function buildFolderTree(fileEntries: [string, FileResult][]): FolderNode {
+  const root: FolderNode = { files: [], children: new Map() };
+  for (const [path, result] of fileEntries) {
+    const parts = path.split("/");
+    const fileName = parts.pop()!;
+    let node = root;
+    for (const part of parts) {
+      if (!node.children.has(part)) {
+        node.children.set(part, { files: [], children: new Map() });
+      }
+      node = node.children.get(part)!;
+    }
+    node.files.push([fileName, result]);
+  }
+  return root;
+}
+
+function allMutantsInNode(node: FolderNode): Mutant[] {
+  const mutants = node.files.flatMap(([, f]) => f.mutants);
+  for (const child of node.children.values()) {
+    mutants.push(...allMutantsInNode(child));
+  }
+  return mutants;
+}
+
+function renderFolderNode(name: string, node: FolderNode): string {
+  const allMuts = allMutantsInNode(node);
+  const score = mutationScore(allMuts);
+  const counts = statusCounts(allMuts);
+
+  const parts: string[] = [];
+
+  parts.push("<details>");
+  parts.push(
+    `<summary><code>${name}</code> ${score.toFixed(2)}% ` +
+      `(Killed: ${counts.killed}, Survived: ${counts.survived}, ` +
+      `No Coverage: ${counts.noCoverage}, Timeout: ${counts.timeout})</summary>`,
+  );
+  parts.push("");
+
+  if (node.files.length > 0) {
+    parts.push("| File | Mutation Score | Killed | Survived | No Coverage | Timeout |");
+    parts.push("| --- | --- | --- | --- | --- | --- |");
+    for (const [fileName, file] of node.files) {
+      const c = statusCounts(file.mutants);
+      parts.push(
+        `| ${fileName} | ${mutationScore(file.mutants).toFixed(2)}% | ${c.killed} | ${c.survived} | ${c.noCoverage} | ${c.timeout} |`,
+      );
+    }
+    parts.push("");
+  }
+
+  for (const [childName, childNode] of node.children) {
+    parts.push(renderFolderNode(childName, childNode));
+    parts.push("");
+  }
+
+  parts.push("</details>");
+  return parts.join("\n");
+}
+
+function folderScoresSection(fileEntries: [string, FileResult][]): string {
+  if (fileEntries.length === 0) return "";
+  const tree = buildFolderTree(fileEntries);
+
+  const sections: string[] = [];
+  for (const [name, node] of tree.children) {
+    sections.push(renderFolderNode(name, node));
+  }
+  for (const [fileName, file] of tree.files) {
+    const c = statusCounts(file.mutants);
+    sections.push(
+      `| ${fileName} | ${mutationScore(file.mutants).toFixed(2)}% | ${c.killed} | ${c.survived} | ${c.noCoverage} | ${c.timeout} |`,
+    );
+  }
+  return sections.join("\n\n");
+}
+
 
 function survivedMutantsSection(
   fileEntries: [string, FileResult][],
@@ -159,7 +239,7 @@ export function convertToMarkdown(
   const sections = [
     summaryHeader(allMutants, report.thresholds),
     statusCountsTable(allMutants),
-    fileScoresTable(fileEntries),
+    folderScoresSection(fileEntries),
     options.survivedMutants ? survivedMutantsSection(fileEntries) : "",
     recommendationsSection(fileEntries),
   ];

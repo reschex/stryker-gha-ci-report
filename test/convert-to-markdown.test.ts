@@ -344,13 +344,76 @@ describe("convertToMarkdown", () => {
     });
   });
 
-  describe("per-file mutation scores", () => {
-    it("omits the table when the report has no files", () => {
+  describe("folder scores", () => {
+    it("rolls up score on parent from all descendant files", () => {
+      const report = makeReport({
+        "src/foo.ts": ["Killed"],
+        "src/core/bar.ts": ["Survived"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      const srcSummary = markdown.match(/<summary><code>src<\/code>[^<]+/)?.[0] ?? "";
+      expect(srcSummary).toContain("50.00%");
+      expect(srcSummary).toContain("Killed: 1");
+      expect(srcSummary).toContain("Survived: 1");
+    });
+
+    it("nests subfolders as collapsible sections within their parent", () => {
+      const report = makeReport({
+        "src/core/foo.ts": ["Killed", "Survived"],
+        "src/core/bar.ts": ["Killed"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("<summary><code>src</code>");
+      expect(markdown).toContain("<summary><code>core</code>");
+      expect(markdown).toContain("| foo.ts | 50.00% | 1 | 1 | 0 | 0 |");
+      expect(markdown).toContain("| bar.ts | 100.00% | 1 | 0 | 0 | 0 |");
+      const srcIdx = markdown.indexOf("<summary><code>src</code>");
+      const coreIdx = markdown.indexOf("<summary><code>core</code>");
+      expect(srcIdx).toBeLessThan(coreIdx);
+    });
+
+    it("shows separate collapsible sections for different top-level folders", () => {
+      const report = makeReport({
+        "src/foo.ts": ["Killed", "Survived"],
+        "lib/bar.ts": ["Killed", "Killed"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("<summary><code>src</code>");
+      expect(markdown).toContain("<summary><code>lib</code>");
+      expect(markdown).toContain("| foo.ts | 50.00% | 1 | 1 | 0 | 0 |");
+      expect(markdown).toContain("| bar.ts | 100.00% | 2 | 0 | 0 | 0 |");
+    });
+
+    it("shows a folder as a collapsible section with rollup score and file table with status counts", () => {
+      const report = makeReport({
+        "src/foo.ts": ["Killed", "Survived"],
+        "src/bar.ts": ["Killed", "Killed"],
+      });
+
+      const markdown = convertToMarkdown(report);
+
+      expect(markdown).toContain("<details>");
+      expect(markdown).toContain("<summary><code>src</code>");
+      expect(markdown).toContain("75.00%");
+      expect(markdown).toContain("| File | Mutation Score | Killed | Survived | No Coverage | Timeout |");
+      expect(markdown).toContain("| foo.ts | 50.00% | 1 | 1 | 0 | 0 |");
+      expect(markdown).toContain("| bar.ts | 100.00% | 2 | 0 | 0 | 0 |");
+    });
+  });
+
+  describe("folder scores edge cases", () => {
+    it("omits folder sections when the report has no files", () => {
       const report = makeReport({});
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).not.toContain("| File |");
+      expect(markdown).not.toContain("<details>");
     });
 
     it("shows 0.00% for a file with no mutants", () => {
@@ -361,24 +424,8 @@ describe("convertToMarkdown", () => {
 
       const markdown = convertToMarkdown(report);
 
-      expect(markdown).toContain("| src/empty.ts | 0.00% |");
-      expect(markdown).toContain("| src/foo.ts | 100.00% |");
-    });
-
-    it("includes a table with each file and its mutation score", () => {
-      const report = makeReport({
-        "src/foo.ts": ["Killed", "Killed", "Survived"],
-        "src/bar.ts": ["Killed", "Survived", "Survived", "Survived"],
-      });
-
-      const markdown = convertToMarkdown(report);
-
-      expect(markdown).toContain(
-        "| File | Mutation Score |\n" +
-        "| --- | --- |\n" +
-        "| src/foo.ts | 66.67% |\n" +
-        "| src/bar.ts | 25.00% |",
-      );
+      expect(markdown).toContain("| empty.ts | 0.00% | 0 | 0 | 0 | 0 |");
+      expect(markdown).toContain("| foo.ts | 100.00% | 1 | 0 | 0 | 0 |");
     });
   });
 });

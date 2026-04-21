@@ -11,10 +11,13 @@ Feature: Convert Stryker mutation testing report to GitHub Actions summary markd
     And the mutation score is calculated as (Killed + Timeout) / (Killed + Timeout + Survived + NoCoverage)
     And CompileError, RuntimeError, and Ignored mutants are excluded from the calculation
 
-  Scenario: Show per-file mutation scores
-    Given a Stryker JSON report with multiple files
+  Scenario: Show per-folder mutation scores with expandable file details
+    Given a Stryker JSON report with files in multiple folders
     When the report is converted to markdown
-    Then the output contains a table of files with their individual mutation scores
+    Then each folder is shown as a collapsible section with a rollup mutation score and status counts
+    And expanding a folder reveals a table of individual file scores and status counts
+    And nested folders appear as nested collapsible sections within their parent
+    And the file table includes columns for mutation score, killed, survived, no coverage, and timeout
 
   Scenario: Show mutant status counts
     Given a Stryker JSON report
