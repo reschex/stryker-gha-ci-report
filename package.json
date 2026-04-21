@@ -4,6 +4,9 @@
   "description": "Convert Stryker mutation testing JSON reports to GitHub Actions summary markdown",
   "type": "module",
   "main": "dist/index.js",
+  "bin": {
+    "stryker-gha-ci-report": "dist/cli.js"
+  },
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
